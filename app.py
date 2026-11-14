@@ -1,10 +1,11 @@
 
+from flask import Flask, jsonify
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.metrics import accuracy_score
 
-# Create sample dataset
+app = Flask(__name__)
+
+# Sample dataset
 data = {
     'Study_Hours': [2, 4, 5, 6, 8, 9, 3, 7],
     'Attendance': [50, 60, 70, 80, 90, 95, 55, 85],
@@ -16,32 +17,40 @@ df = pd.DataFrame(data)
 X = df[['Study_Hours', 'Attendance']]
 y = df['Result']
 
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.25, random_state=42
-)
-
 # Train Random Forest model
 model = RandomForestClassifier(random_state=42)
-model.fit(X_train, y_train)
+model.fit(X, y)
 
-# Make predictions
-y_pred = model.predict(X_test)
+# Home API
+@app.route('/')
+def home():
+    return jsonify({
+        "message": "Student Result Prediction API is running",
+        "status": "success"
+    })
 
-# Calculate accuracy
-accuracy = accuracy_score(y_test, y_pred)
+# Health check API
+@app.route('/health')
+def health():
+    return jsonify({
+        "status": "healthy"
+    })
 
-print("Student Result Prediction")
-print("Model Accuracy:", accuracy)
+# Prediction API
+@app.route('/predict')
+def predict():
+    student = pd.DataFrame({
+        'Study_Hours': [6],
+        'Attendance': [85]
+    })
 
-# Predict result for a new student
-new_student = pd.DataFrame({
-    'Study_Hours': [6],
-    'Attendance': [85]
-})
+    prediction = model.predict(student)
 
-prediction = model.predict(new_student)
+    result = "Pass" if prediction[0] == 1 else "Fail"
 
-if prediction[0] == 1:
-    print("Predicted Result: Pass")
-else:
-    print("Predicted Result: Fail")
+    return jsonify({
+        "prediction": result
+    })
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000)
